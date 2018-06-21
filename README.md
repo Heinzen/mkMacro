@@ -20,3 +20,8 @@ These instructions will guide you into having a functional copy of the project o
 ### License
 
 Assume [MIT licence](https://opensource.org/licenses/MIT).
+
+## Other Contributors
+
+- evilC for [AppFactory](https://github.com/evilC/AppFactory)
+- A_Samurai for [AnimatedGifControl](https://autohotkey.com/board/topic/76136-animatedgifcontrol/)
