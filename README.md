@@ -1,6 +1,7 @@
 # MkMacro
+Author: [Heinzen](https://github.com/Heinzen)
 
-Simple macro tool written using [AutoHotkey](https://autohotkey.com/) with the purpose of enhanced functionality and better usability than the most common alternatives, such as peripheral drivers. See wiki page for features.
+Simple macro tool written using [AutoHotkey](https://autohotkey.com/) with the purpose of enhanced functionality and better usability than the most common alternatives, such as peripheral drivers. See the wiki page for [features](https://github.com/Heinzen/mkMacro/wiki/Features).
 
 ## Getting Started
 
