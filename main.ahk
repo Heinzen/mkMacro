@@ -4,10 +4,17 @@
 ;AppFactory author: evilC (Modified by Heinzen)
 ;GifPlayer author: A_Samurai (Modified by Heinzen)
 
+;	---TODOS---
+; 1) Implement delay between skills
+; 2) Improve GUI performance
+; 3) Kill switch
+
 #SingleInstance, Force
 #MaxThreadsPerHotkey 2
 #Include %A_ScriptDir%\Import\AppFactory.ahk
 #Include %A_ScriptDir%\Import\GifPlayer.ahk
+
+Gui +LastFound
 
 ;	Request Admin
 ;	-------------
@@ -24,7 +31,19 @@ RunAsAdmin() {
 	ExitApp
 }
 
-SetTimer, CheckActiveWindow, 1000
+;Shell hooks for an optimal way to disable the overlay if BNS or AHK loses focus.
+;Using a SetTimer drastically reduces performance as well as interrupts current 
+;rotation
+hWnd := WinExist(), DllCall( "RegisterShellHookWindow", UInt,hWnd )
+MsgNum := DllCall( "RegisterWindowMessage", Str,"SHELLHOOK" )
+OnMessage( MsgNum, "ShellMessage" )
+
+ShellMessage( wParam,lParam ) {
+	if(wParam = 0x8004)
+		CheckActiveWindow()
+}
+
+;SetTimer, CheckActiveWindow, 2500
 
 ;	Context Variables
 ; 	-----------------
@@ -76,10 +95,10 @@ CreateOverlay()
 OnMessage(0x2A1,"WM_MOUSEHOVER")
 OnMessage(0x201,"WM_LMBDOWN")
 	
-;This is a terrible solution to extremely loading times when
-;destroying and creating GUI windows. Ultimately, find a way to
-;destroy and recreate so we dont lose CPU cycles updating both 
-;overlays even though the overhead is minimum.
+;The create/destroy problem has been addressed.
+;In this case it is still less demanding to have
+;two ActiveX elements running than creating/destroying
+;these GUI elements
 CreateOverlay() {
 	try {
 		AnimatedGifControl("o_Still", still_Spinner, "x0 y0 w50 h50")
@@ -96,12 +115,7 @@ CreateOverlay() {
 		GUI, o_Spin:+Owner
 		GUI, o_Spin:Add, GroupBox, x0  y-6 w50 h57
 		GUI, o_Spin:Show,x%_overlayX% y%_overlayY% w50 h50 NoActivate Hide, o_Spin	
-
-		GUI, overlayShadow: -Caption
-		GUI, overlayShadow: Color, 000000
-		GUI, overlayShadow: Show, x500 y500 w55 h55 NoActivate, overlayShadow
 		
-		WinSet, Transparent, 100, overlayShadow
 		WinSet, Transparent, 170, o_Still 	;Do not use TransColor as that 
 		WinSet, Transparent, 170, o_Spin	;breaks Windows GUI Draw at this point.
 	} catch, what {
@@ -116,16 +130,17 @@ WM_LMBDOWN()
 	PostMessage, 0xA1, 2
 }
 
-WM_MOUSEHOVER()
-{
-	Tooltip, Move me
-}
-
 ;	GUI Controls
 ;	------------	
 g_ConfirmButton:
 	SubmitAll()
 	return
+
+SubmitAll() {
+	SplitRotation()
+	GUI, Submit, NoHide
+	return
+}
 
 ToggleOverlay(){
 	SubmitAll()
@@ -146,13 +161,7 @@ ToggleOverlay(){
 	return
 }
 
-SubmitAll() {
-	SplitRotation()
-	GUI, Submit, NoHide
-	return
-}
-
-CheckActiveWindow:
+CheckActiveWindow() {
 	if(!(WinActive(bns_class) or WinActive(script_class)) and t_Overlay = "1") {
 		GUI, o_Spin:hide
 		GUI, o_Still:hide
@@ -160,7 +169,7 @@ CheckActiveWindow:
 	else if(WinActive(bns_class) or WinActive(script_class))
 		ToggleOverlay()
 	return
-		
+}		
 
 SplitRotation() {
 	if(t_RotationBox != "")
@@ -231,8 +240,6 @@ FireRotation() {
 			DllCall("Sleep", "UInt", 5) ; Save CPU Performance and use WinAPI's call for reliability
 	}
 }
-
-~*^X::ExitApp
 
 GuiClose:
 	ExitApp
