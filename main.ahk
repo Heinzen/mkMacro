@@ -9,8 +9,8 @@
 ; 2) Improve GUI performance
 ; 3) Kill switch
 
+#SingleInstance, Force
 #MaxThreadsPerHotkey 2
-#Persistent
 #Include %A_ScriptDir%\Import\AppFactory.ahk
 #Include %A_ScriptDir%\Import\GifPlayer.ahk
 #Include %A_ScriptDir%\Import\Updater.ahk
