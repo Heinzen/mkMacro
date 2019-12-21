@@ -5,12 +5,14 @@
 ;GifPlayer author: A_Samurai (Modified by Heinzen)
 
 ;	---TODOS---
-; 1) Implement delay between skills
+; 1) Implement delay between skills - done
 ; 2) Improve GUI performance
 ; 3) Kill switch
 
+; New 1) Try to block new inputs whenever one is triggered already
+
 #SingleInstance, Force
-#MaxThreadsPerHotkey 2
+;#MaxThreadsPerHotkey 1
 #Include %A_ScriptDir%\Import\AppFactory.ahk
 #Include %A_ScriptDir%\Import\GifPlayer.ahk
 
@@ -43,8 +45,6 @@ ShellMessage( wParam,lParam ) {
 		CheckActiveWindow()
 }
 
-;SetTimer, CheckActiveWindow, 2500
-
 ;	Context Variables
 ; 	-----------------
 global t_Overlay := 0
@@ -57,8 +57,6 @@ global t_Hook := 0
 global t_hotkey :=
 global rotation :=
 global toggle := 0
-global gif_Spinner := A_ScriptDir "\Resources\spinner.gif"
-global still_Spinner := A_ScriptDir "\Resources\\still.png"
 global _overlayX := 855
 global _overlayY := 550
 global bns_class := "ahk_class LaunchUnrealUWindowsClient"
@@ -68,9 +66,27 @@ global ActiveOverlay := "o_Still"
 global move_Tooltip := 0
 global still_Style := ""
 global spin_Style := ""
+global default_gdc := 25
+global rotationThread :=
 
+;Change this to byte64
+;Temp solution since I have other issues to solve first
+global gif_Spinner := A_ScriptDir "\Resources\spinner.gif"
+global still_Spinner := A_ScriptDir "\Resources\still.png"
+
+if(!FileExist(still_Spinner) or !FileExist(gif_Spinner)) {
+	resourcePath := A_ScriptDir "\Resources"
+	If(!FileExist(resourcePath))
+		FileCreateDir, Resources
+	FileInstall, spinner.gif, %gif_Spinner%, 1
+	FileInstall, still.png, %still_Spinner%, 1
+}
+	
 ;	GUI Design
 ;	----------
+;	The reason to use AppFactory is to make all settings persistent
+;	as well as for the functionality of capturing the extra keybinds
+;	that are not supported natively
 factory := new AppFactory()
 
 GUI,Add,GroupBox,x157 y15 w140 h180,Settings
@@ -176,9 +192,8 @@ SplitRotation() {
 		rotation := StrSplit(t_RotationBox, ";")
 	return
 }
-	
+
 TryRecordHotkey(ctrl, state) {
-	
 	if(t_Hotkey = "")
 	{
 		Gui, Submit, NoHide
@@ -189,6 +204,8 @@ TryRecordHotkey(ctrl, state) {
 }
 	
 TriggerAction(ctrl, state) {
+	;if(rotationThread = "")
+	;	rotationThread := AhkThread(0)
 	if(t_Hook = 1 and !WinActive(bns_class))
 		return
 	if(t_Hold = 1)
@@ -197,9 +214,7 @@ TriggerAction(ctrl, state) {
 		UpdateSpinner()
 	if(t_Rotation != rotation)
 		SplitRotation()
-	
-	while(toggle = 1 or GetKeyState(t_hotkey, "P") = 1)
-		FireRotation()
+	FireRotation()
 }	
 
 ChangeToggleState() {
@@ -229,15 +244,32 @@ UpdateSpinner() {
 }
 
 FireRotation() {
-	for index, skill in rotation {	
-		if((t_Hook = 1 and !WinActive(bns_class)) or (t_Hold = 1 and toggle = 0))
-			break
-		SendInput {%skill%}
-	
-		if(t_Delay = "1")
-			Sleep, %t_DelayBox% ; Adding the extra average of 15.6ms is seemingless in this case
-		else
-			DllCall("Sleep", "UInt", 5) ; Save CPU Performance and use WinAPI's call for reliability
+	while(toggle = 1 or GetKeyState(t_hotkey, "P") = 1) {
+		for index, skill in rotation {	
+			;Verifies whether its a delay command
+			i_length := StrLen(skill)
+			l_delay := SubStr(skill, 1)
+			
+			if((t_Hook = 1 and !WinActive(bns_class)) or (t_Hold = 1 and toggle = 0))
+				break
+			if(i_length > 1 and l_delay Is Number) {
+				;Sleep, l_delay
+				DllCall("Sleep", "UInt", l_delay)
+				SendInput {%skill% down}
+				SendInput {%skill% up}
+			}
+			else if(i_length = 1) {
+				SendInput {%skill% down}
+				SendInput {%skill% up}
+			}
+				
+			if(t_Delay = "1")
+				;Sleep, t_delayBox
+				DllCall("Sleep", "UInt", t_delayBox)
+			else
+				;Sleep, default_gdc
+				DllCall("Sleep", "UInt", default_gdc) ; Save CPU Performance and use WinAPI's call for reliability
+		}
 	}
 }
 
