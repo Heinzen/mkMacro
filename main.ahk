@@ -15,6 +15,8 @@
 ;#MaxThreadsPerHotkey 1
 #Include %A_ScriptDir%\Import\AppFactory.ahk
 #Include %A_ScriptDir%\Import\GifPlayer.ahk
+#Include %A_ScriptDir%\Import\Updater.ahk
+#Include %A_ScriptDir%\Import\Json_ToObj.ahk
 
 Gui +LastFound
 
@@ -32,6 +34,11 @@ RunAsAdmin() {
 	: A_AhkPath),str,(A_IsCompiled ? "": """" . A_ScriptFullPath . """" . A_Space) params,str,A_WorkingDir,int,1)
 	ExitApp
 }
+
+;	Updater
+;	-------
+workingVersion := "v0.4"
+Update(workingVersion)
 
 ;Shell hooks for an optimal way to disable the overlay if BNS or AHK loses focus.
 ;Using a SetTimer drastically reduces performance as well as interrupts current 
@@ -103,9 +110,9 @@ GUI,Add,GroupBox,x15 y15 w120 h180,Toggles
 	factory.AddControl("ToggleDelay", "CheckBox", "x27 y85 w90 h13 vt_Delay", "Enable Delay", Func("SubmitAll"))
 	factory.AddControl("HookToClient", "CheckBox", "x27 y105 w90 h13 vt_Hook", "Hook to BnS", Func("SubmitAll"))
 DetectHiddenWindows, On
-WinSetTitle, mk Macro
+WinSetTitle, mkMacro
 GUI, Submit, NoHide
-GUI,Show,w310 h220, mkMacro
+GUI,Show,w310 h220, mkMacro %workingVersion%
 
 CreateOverlay()
 OnMessage(0x2A1,"WM_MOUSEHOVER")
