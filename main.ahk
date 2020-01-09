@@ -37,7 +37,7 @@ RunAsAdmin() {
 
 ;	Updater
 ;	-------
-workingVersion := "v0.4"
+workingVersion := "v0.5"
 Update(workingVersion)
 
 ;Shell hooks for an optimal way to disable the overlay if BNS or AHK loses focus.
