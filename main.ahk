@@ -165,6 +165,73 @@ SubmitAll() {
 	return
 }
 
+<<<<<<< Updated upstream
+=======
+SetPingCalculationTimer() {
+	if(t_Anicancel = 0) {
+		SetTimer, CalculateGCD, Off
+		GuiControl,,text_GCD,0
+		estimated_gcd := 0
+	}
+	else
+		SetTimer, CalculateGCD, 500
+}
+
+CalculateGCD:
+	if(t_GameRegion = "North America")
+		addr := NorthAmerica_IP
+	else
+		addr := Europe_IP
+	
+	SetTimer, CalculateGCD, off
+	if A_IsCompiled {
+	Run, % A_ScriptDir . "\PingMsg.exe """ . A_ScriptName . """ "
+		. addr . " " . A_Index,, Hide, threadID
+	}
+	else {
+		Run, % A_ScriptDir . "\Import\PingMsg.ahk """ . A_ScriptName . """ "
+			. addr . " " . A_Index,, Hide, threadID
+	}
+return
+
+Receive_WM_COPYDATA(wParam, lParam){
+    Global
+    Critical
+
+    StringAddress := NumGet(lParam + 2*A_PtrSize)
+    CopyOfData := StrGet(StringAddress)
+
+    ;hostID|HostName|PingTime|IP
+    reply := StrSplit(CopyOfData, "|")
+
+    ;Process reply
+    ;Does not update latency if ping timedout
+	if (reply[3] != "TIMEOUT")
+    {
+		;Good Return
+        ;Add new ping time to array
+        ping := reply[3]
+		SetGlobalCooldown()
+	}
+	else {
+		;Is timeout
+		GuiControl,,text_GCD,NULL
+	}
+	
+    return true
+}
+
+SetGlobalCooldown() {
+	if(ping != 0) {
+		skilldelay := ping * t_AutoBias
+		maxdelay := skilldelay * 1.7
+		estimated_gcd := Floor((skilldelay + maxdelay)/2)
+		GuiControl,,text_GCD,%estimated_gcd%
+	}
+	SetTimer, CalculateGCD, 500
+}
+	
+>>>>>>> Stashed changes
 ToggleOverlay(){
 	SubmitAll()
 	WinGet, still_Style, Style, o_Still
@@ -250,6 +317,27 @@ UpdateSpinner() {
 	return
 }
 
+<<<<<<< Updated upstream
+=======
+FireAniCancelledRotation() {
+	if((t_Hook = 1 and !WinActive(bns_class)) or (t_Hold = 1 and toggle = 0))
+		return
+				
+	while(toggle = 1 or GetKeyState(t_hotkey, "P") = 1) {
+		timeStart := A_TickCount
+		loop {
+			SendInput {%t_AnicancelSkill%}
+			timeNow := A_TickCount - timeStart
+			if(timeNow > 20)
+				break
+		}
+		Sleep, estimated_gcd
+		ParseRotation()
+		
+	}
+}
+
+>>>>>>> Stashed changes
 FireRotation() {
 	while(toggle = 1 or GetKeyState(t_hotkey, "P") = 1) {
 		for index, skill in rotation {	
