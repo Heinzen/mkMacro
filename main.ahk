@@ -117,7 +117,7 @@ GUI,Add,GroupBox,x157 y15 w140 h180,Animation Canceler
 	GUI,Add,Text,x169 y75 w120 h13,Skill to cancel
 	factory.AddControl("AniCancelSkill", "Edit", "x169 y90 w70 h21 Limit1 vt_AnicancelSkill", "f", Func("SubmitAll"))
 	GUI,Add,Text,x169 y115 w120 h13,Auto-bias value
-	factory.AddControl("AutoBiasValue", "Edit", "x169 y130 w70 h21 vt_AutoBias", "2.50", Func("SubmitAll"))
+	factory.AddControl("AutoBiasValue", "Edit", "x169 y130 w70 h21 vt_AutoBias", "1.20", Func("SubmitAll"))
 	GUI,Add,Text,x169 y155 w120 h13,Estimated GCD: 
 	GUI,Add,Text,x250 y155 w30 h13 vtext_GCD,0
 
