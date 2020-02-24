@@ -13,13 +13,13 @@ Update(workingVersion) {
 		IfMsgBox, Yes
 			DownloadUpdate(latestVersion)
 	}
-	
+	DownloadPingMsg(latestVersion)
 }
 
 DownloadUpdate(v) {
 	downloadURL := "https://github.com/Heinzen/mkMacro/releases/download/" . v . "/mkMacro.exe"
 	RenameSelf()
-	DownloadPingMsg(v)
+	
 	UrlDownloadToFile, %downloadURL%, %A_WorkingDir%\mkMacro.exe
 	DeleteSelf()
 	Run, %A_ScriptName%
@@ -31,9 +31,13 @@ RenameSelf() {
 }
 
 DownloadPingMsg(v) {
-	FileDelete, %A_WorkingDir%\PingMsg.exe
+	if FileExist(A_WorkingDir . "\PingMsg.exe")
+		FileDelete, %A_WorkingDir%\PingMsg.exe
+
 	downloadURL := "https://github.com/Heinzen/mkMacro/releases/download/" . v . "/PingMsg.exe"
 	UrlDownloadToFile, %downloadURL%, %A_WorkingDir%\PingMsg.exe
+	
+	
 }
 
 
