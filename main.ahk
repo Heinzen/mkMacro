@@ -204,7 +204,7 @@ CalculateGCD:
 	
 	SetTimer, CalculateGCD, off
 	if A_IsCompiled {
-	Run, % A_ScriptDir . "\Import\PingMsg.exe """ . A_ScriptName . """ "
+	Run, % A_ScriptDir . "\PingMsg.exe """ . A_ScriptName . """ "
 		. addr . " " . A_Index,, Hide, threadID
 	}
 	else {
@@ -353,10 +353,6 @@ FireAniCancelledRotation() {
 		ParseRotation()
 		
 	}
-	
-	;if(t_Anicancel = 1 and GetKeyState(t_AnicancelSkill) = 1)
-	;	SendInput {%t_AnicancelSkill% up}
-	
 }
 
 FireRotation() {
