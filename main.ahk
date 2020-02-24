@@ -12,7 +12,6 @@
 ; New 1) Try to block new inputs whenever one is triggered already
 
 #SingleInstance, Force
-;#MaxThreadsPerHotkey 1
 #Include %A_ScriptDir%\Import\AppFactory.ahk
 #Include %A_ScriptDir%\Import\GifPlayer.ahk
 #Include %A_ScriptDir%\Import\Updater.ahk
@@ -20,7 +19,7 @@
 
 Gui +LastFound
 
-;	Request Admin
+;	Start-up
 ;	-------------
 If(!A_IsAdmin)
 	RunAsAdmin()
@@ -37,8 +36,9 @@ RunAsAdmin() {
 
 ;	Updater
 ;	-------
-workingVersion := "v0.5"
+workingVersion := "v0.6"
 Update(workingVersion)
+
 
 ;Shell hooks for an optimal way to disable the overlay if BNS or AHK loses focus.
 ;Using a SetTimer drastically reduces performance as well as interrupts current 
@@ -62,6 +62,10 @@ global t_DelayBox := 0
 global t_ConfirmButton := 0
 global t_Hook := 0
 global t_hotkey :=
+global t_AnicancelSkill
+global t_Anicancel
+global t_GameRegion
+global t_AutoBias
 global rotation :=
 global toggle := 0
 global _overlayX := 855
@@ -74,7 +78,10 @@ global move_Tooltip := 0
 global still_Style := ""
 global spin_Style := ""
 global default_gdc := 25
-global rotationThread :=
+global estimated_gcd :=
+global ping := 0
+global Europe_IP := "18.194.180.254"
+global NorthAmerica_IP := "64.25.37.235"
 
 ;Change this to byte64
 ;Temp solution since I have other issues to solve first
@@ -96,27 +103,40 @@ if(!FileExist(still_Spinner) or !FileExist(gif_Spinner)) {
 ;	that are not supported natively
 factory := new AppFactory()
 
-GUI,Add,GroupBox,x157 y15 w140 h180,Settings
-	GUI,Add,Text,x169 y35 w70 h13,Delay (in ms)
-	factory.AddControl("DelayBox", "Edit", "x170 y50 w40 h21 vt_DelayBox", "0", Func("SubmitAll"))
-	GUI,Add,Text,x171 y75 w120 h13,Rotation (";" separated)
-	factory.AddControl("RotationBox", "Edit", "x170 y90 w70 h21 vt_RotationBox", "3;t;f;", Func("SubmitAll"))
-	factory.AddInputButton("HK1", "x170 y130 w115 h25", Func("TryRecordHotkey").Bind("Keybind"))
-	GUI,Add,Button,x170 y160 w115 gg_ConfirmButton vt_ConfirmButton,Save
-	
-GUI,Add,GroupBox,x15 y15 w120 h180,Toggles
+GUI,Add,GroupBox,x299 y15 w140 h180,Settings
+	GUI,Add,Text,x312 y35 w70 h13,Delay (in ms)
+	factory.AddControl("DelayBox", "Edit", "x313 y50 w40 h21 vt_DelayBox", "0", Func("SubmitAll"))
+	GUI,Add,Text,x312 y75 w120 h13,Rotation (";" separated)
+	factory.AddControl("RotationBox", "Edit", "x313 y90 w70 h21 vt_RotationBox", "3;t;f;", Func("SubmitAll"))
+	factory.AddInputButton("HK1", "x312 y130 w115 h25", Func("TryRecordHotkey").Bind("Keybind"))
+	GUI,Add,Button,x312 y160 w115 gg_ConfirmButton vt_ConfirmButton,Save
+
+GUI,Add,GroupBox,x157 y15 w140 h180,Animation Canceler
+	GUI,Add,Text,x169 y35 w120 h13,Game region
+	factory.AddControl("RegionPicker", "ComboBox", "x169 y50 w120 vt_GameRegion", "North America|Europe", "Game Region", Func("SubmitAll"))
+	GUI,Add,Text,x169 y75 w120 h13,Skill to cancel
+	factory.AddControl("AniCancelSkill", "Edit", "x169 y90 w70 h21 Limit1 vt_AnicancelSkill", "f", Func("SubmitAll"))
+	GUI,Add,Text,x169 y115 w120 h13,Auto-bias value
+	factory.AddControl("AutoBiasValue", "Edit", "x169 y130 w70 h21 vt_AutoBias", "1.20", Func("SubmitAll"))
+	GUI,Add,Text,x169 y155 w120 h13,Estimated GCD: 
+	GUI,Add,Text,x250 y155 w30 h13 vtext_GCD,0
+
+GUI,Add,GroupBox,x15 y15 w130 h180,Toggles
 	factory.AddControl("Overlay", "CheckBox", "x27 y45 w90 h13 vt_Overlay", "Display Overlay", Func("ToggleOverlay"))
 	factory.AddControl("HoldKB", "CheckBox", "x27 y65 w90 h13 vt_Hold", "Attack Toggle", Func("SubmitAll"))
 	factory.AddControl("ToggleDelay", "CheckBox", "x27 y85 w90 h13 vt_Delay", "Enable Delay", Func("SubmitAll"))
 	factory.AddControl("HookToClient", "CheckBox", "x27 y105 w90 h13 vt_Hook", "Hook to BnS", Func("SubmitAll"))
+	factory.AddControl("AniCancel", "CheckBox", "x27, y125, w110, h13 vt_Anicancel", "Animation Canceler", Func("SubmitAll"))
+
 DetectHiddenWindows, On
 WinSetTitle, mkMacro
 GUI, Submit, NoHide
-GUI,Show,w310 h220, mkMacro %workingVersion%
+GUI,Show,w455 h220, mkMacro %workingVersion%
 
 CreateOverlay()
 OnMessage(0x2A1,"WM_MOUSEHOVER")
 OnMessage(0x201,"WM_LMBDOWN")
+OnMessage(0x4a, "Receive_WM_COPYDATA")
 	
 ;The create/destroy problem has been addressed.
 ;In this case it is still less demanding to have
@@ -162,9 +182,74 @@ g_ConfirmButton:
 SubmitAll() {
 	SplitRotation()
 	GUI, Submit, NoHide
+	SetPingCalculationTimer()
 	return
 }
 
+SetPingCalculationTimer() {
+	if(t_Anicancel = 0) {
+		SetTimer, CalculateGCD, Off
+		GuiControl,,text_GCD,0
+		estimated_gcd := 0
+	}
+	else
+		SetTimer, CalculateGCD, 500
+}
+
+CalculateGCD:
+	if(t_GameRegion = "North America")
+		addr := NorthAmerica_IP
+	else
+		addr := Europe_IP
+	
+	SetTimer, CalculateGCD, off
+	if A_IsCompiled {
+	Run, % A_ScriptDir . "\Import\PingMsg.exe """ . A_ScriptName . """ "
+		. addr . " " . A_Index,, Hide, threadID
+	}
+	else {
+		Run, % A_ScriptDir . "\Import\PingMsg.ahk """ . A_ScriptName . """ "
+			. addr . " " . A_Index,, Hide, threadID
+	}
+return
+
+Receive_WM_COPYDATA(wParam, lParam){
+    Global
+    Critical
+
+    StringAddress := NumGet(lParam + 2*A_PtrSize)
+    CopyOfData := StrGet(StringAddress)
+
+    ;hostID|HostName|PingTime|IP
+    reply := StrSplit(CopyOfData, "|")
+
+    ;Process reply
+    ;Does not update latency if ping timedout
+	if (reply[3] != "TIMEOUT")
+    {
+		;Good Return
+        ;Add new ping time to array
+        ping := reply[3]
+		SetGlobalCooldown()
+	}
+	else {
+		;Is timeout
+		GuiControl,,text_GCD,NULL
+	}
+	
+    return true
+}
+
+SetGlobalCooldown() {
+	if(ping != 0) {
+		skilldelay := ping * t_AutoBias
+		maxdelay := skilldelay * 1.7
+		estimated_gcd := Floor((skilldelay + maxdelay)/2)
+		GuiControl,,text_GCD,%estimated_gcd%
+	}
+	SetTimer, CalculateGCD, 500
+}
+	
 ToggleOverlay(){
 	SubmitAll()
 	WinGet, still_Style, Style, o_Still
@@ -211,8 +296,6 @@ TryRecordHotkey(ctrl, state) {
 }
 	
 TriggerAction(ctrl, state) {
-	;if(rotationThread = "")
-	;	rotationThread := AhkThread(0)
 	if(t_Hook = 1 and !WinActive(bns_class))
 		return
 	if(t_Hold = 1)
@@ -221,7 +304,11 @@ TriggerAction(ctrl, state) {
 		UpdateSpinner()
 	if(t_Rotation != rotation)
 		SplitRotation()
-	FireRotation()
+	if(t_AniCancel = 0)
+		FireRotation()
+	else
+		FireAniCancelledRotation()
+		
 }	
 
 ChangeToggleState() {
@@ -250,33 +337,55 @@ UpdateSpinner() {
 	return
 }
 
+FireAniCancelledRotation() {
+	if((t_Hook = 1 and !WinActive(bns_class)) or (t_Hold = 1 and toggle = 0))
+		return
+				
+	while(toggle = 1 or GetKeyState(t_hotkey, "P") = 1) {
+		timeStart := A_TickCount
+		loop {
+			SendInput {%t_AnicancelSkill%}
+			timeNow := A_TickCount - timeStart
+			if(timeNow > 20)
+				break
+		}
+		Sleep, estimated_gcd
+		ParseRotation()
+		
+	}
+	
+	;if(t_Anicancel = 1 and GetKeyState(t_AnicancelSkill) = 1)
+	;	SendInput {%t_AnicancelSkill% up}
+	
+}
+
 FireRotation() {
 	while(toggle = 1 or GetKeyState(t_hotkey, "P") = 1) {
-		for index, skill in rotation {	
-			;Verifies whether its a delay command
-			i_length := StrLen(skill)
-			l_delay := SubStr(skill, 1)
-			
-			if((t_Hook = 1 and !WinActive(bns_class)) or (t_Hold = 1 and toggle = 0))
-				break
-			if(i_length > 1 and l_delay Is Number) {
-				;Sleep, l_delay
-				DllCall("Sleep", "UInt", l_delay)
-				SendInput {%skill% down}
-				SendInput {%skill% up}
-			}
-			else if(i_length = 1) {
-				SendInput {%skill% down}
-				SendInput {%skill% up}
-			}
+		if((t_Hook = 1 and !WinActive(bns_class)) or (t_Hold = 1 and toggle = 0))
+			break
+		
+		ParseRotation()
 				
-			if(t_Delay = "1")
-				;Sleep, t_delayBox
-				DllCall("Sleep", "UInt", t_delayBox)
-			else
-				;Sleep, default_gdc
-				DllCall("Sleep", "UInt", default_gdc) ; Save CPU Performance and use WinAPI's call for reliability
+		if(t_Delay = "1")
+			Sleep, t_delayBox
+	}
+}
+
+ParseRotation() { 
+	for index, skill in rotation {	
+		;Verifies whether its a delay command
+		i_length := StrLen(skill)
+		l_delay := SubStr(skill, 1)
+		
+		if(i_length > 1 and l_delay Is Number) {
+			Sleep, l_delay
+			SendInput {%skill% down}
+			SendInput {%skill% up}
 		}
+		else if(i_length = 1) {
+			SendInput {%skill% down}
+			SendInput {%skill% up}
+		}	
 	}
 }
 
