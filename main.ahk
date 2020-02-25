@@ -357,21 +357,6 @@ FireAniCancelledRotation() {
 
 FireRotation() {
 	while(toggle = 1 or GetKeyState(t_hotkey, "P") = 1) {
-		timeStart := A_TickCount
-		loop {
-			SendInput {%t_AnicancelSkill%}
-			timeNow := A_TickCount - timeStart
-			if(timeNow > 20)
-				break
-		}
-		Sleep, estimated_gcd
-		ParseRotation()
-		
-	}
-}
-
-FireRotation() {
-	while(toggle = 1 or GetKeyState(t_hotkey, "P") = 1) {
 		if((t_Hook = 1 and !WinActive(bns_class)) or (t_Hold = 1 and toggle = 0))
 			break
 		
