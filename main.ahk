@@ -36,7 +36,7 @@ RunAsAdmin() {
 
 ;	Updater
 ;	-------
-workingVersion := "v0.6"
+workingVersion := "v0.6.2"
 if A_IsCompiled
 	Update(workingVersion)
 
