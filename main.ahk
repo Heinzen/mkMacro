@@ -36,8 +36,9 @@ RunAsAdmin() {
 
 ;	Updater
 ;	-------
-workingVersion := "v0.6"
-Update(workingVersion)
+workingVersion := "v0.6.2"
+if A_IsCompiled
+	Update(workingVersion)
 
 
 ;Shell hooks for an optimal way to disable the overlay if BNS or AHK loses focus.
@@ -364,6 +365,9 @@ FireRotation() {
 				
 		if(t_Delay = "1")
 			Sleep, t_delayBox
+		else
+			Sleep, default_gdc
+		
 	}
 }
 
